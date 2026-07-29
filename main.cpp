@@ -13,23 +13,17 @@ int main(int argc, char *argv[]) {
   // StaticBuffer buffer;
   // OpenRelTable cache;
 
-  unsigned char buff1[BLOCK_SIZE];
-  Disk::readBlock(buff1, 7000);
-
-  char message[] = "Hello";
-  memcpy(buff1 + 20, message, 6);
+  unsigned char buff[BLOCK_SIZE];
   
-  Disk::writeBlock(buff1, 7000);
+  for(int i = 0; i < 4; i++){
+    Disk::readBlock(buff, i);
 
-  unsigned char buff2[BLOCK_SIZE];
-  char message2[6];
+    for (int j = 0; j < BLOCK_SIZE; j++){
+      cout << (int)buff[j] << " ";
+    }
 
-  Disk::readBlock(buff2, 7000);
-
-  memcpy(message2, buff2 + 20, 6);
-
-  cout << message2 << endl;
-
+  }
+  
   return 0;
   // return FrontendInterface::handleFrontend(argc, argv);
 }
