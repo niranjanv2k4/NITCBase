@@ -15,13 +15,10 @@ int main(int argc, char *argv[]) {
   Disk disk_run;
   
   RecBuffer relCatBuffer(RELCAT_BLOCK);
-  RecBuffer attrCatBuffer(ATTRCAT_BLOCK);
 
   HeadInfo relCatHeader;
-  HeadInfo attrCatHeader;
 
   relCatBuffer.getHeader(&relCatHeader);
-  attrCatBuffer.getHeader(&attrCatHeader);
   
   for(int i = 0; i < relCatHeader.numEntries; i++){
 
@@ -30,18 +27,30 @@ int main(int argc, char *argv[]) {
 
     printf("Relation: %s\n", relCatRecord[RELCAT_REL_NAME_INDEX].sVal);
 
-    for(int j = 0; j < attrCatHeader.numEntries; j++){
+    int currBlock = ATTRCAT_BLOCK;
 
-      Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
+    while(currBlock != -1){
+    
+      RecBuffer attrCatBuffer(currBlock);
+      HeadInfo attrCatHeader;
 
-      attrCatBuffer.getRecord(attrCatRecord, j);
+      attrCatBuffer.getHeader(&attrCatHeader);
 
-      if(strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal, relCatRecord[RELCAT_REL_NAME_INDEX].sVal) == 0){
+      for(int j = 0; j < attrCatHeader.numEntries; j++){
 
-        const char *attrType = attrCatRecord[ATTRCAT_ATTR_TYPE_INDEX].nVal == NUMBER ? "NUM" : "STR";
-        printf(" %s: %s\n", attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, attrType);
+        Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
 
+        attrCatBuffer.getRecord(attrCatRecord, j);
+
+        if(strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal, relCatRecord[RELCAT_REL_NAME_INDEX].sVal) == 0){
+
+          const char *attrType = attrCatRecord[ATTRCAT_ATTR_TYPE_INDEX].nVal == NUMBER ? "NUM" : "STR";
+          printf(" %s: %s\n", attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, attrType);
+
+        }
+        
       }
+      currBlock = attrCatHeader.rblock;
 
     }
 
