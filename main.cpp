@@ -13,50 +13,23 @@ using namespace std;
 int main(int argc, char *argv[]) {
   /* Initialize the Run Copy of Disk */
   Disk disk_run;
-  
-  RecBuffer relCatBuffer(RELCAT_BLOCK);
+  StaticBuffer buffer;
+  OpenRelTable cache;
 
-  HeadInfo relCatHeader;
+  for(int i = 0; i < 2; i++){
+    RelCatEntry relCatEntry;
 
-  relCatBuffer.getHeader(&relCatHeader);
-  
-  for(int i = 0; i < relCatHeader.numEntries; i++){
+    RelCacheTable::getRelCatEntry(i, &relCatEntry);
+    printf("Relation: %s\n", relCatEntry.relName);
 
-    Attribute relCatRecord[RELCAT_NO_ATTRS];
-    relCatBuffer.getRecord(relCatRecord, i);
+    for(int j = 0; j < relCatEntry.numAttrs; j++){
 
-    printf("Relation: %s\n", relCatRecord[RELCAT_REL_NAME_INDEX].sVal);
+      AttrCatEntry attrCatEntry;
+      AttrCacheTable::getAttrCatEntry(i, j, &attrCatEntry);
 
-    int currBlock = ATTRCAT_BLOCK;
-
-    while(currBlock != -1){
-    
-      RecBuffer attrCatBuffer(currBlock);
-      HeadInfo attrCatHeader;
-
-      attrCatBuffer.getHeader(&attrCatHeader);
-
-      for(int j = 0; j < attrCatHeader.numEntries; j++){
-
-        Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
-
-        attrCatBuffer.getRecord(attrCatRecord, j);
-
-        if(strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal, relCatRecord[RELCAT_REL_NAME_INDEX].sVal) == 0){
-          if(strcmp(relCatRecord[RELCAT_REL_NAME_INDEX].sVal, "Students") == 0 && strcmp(attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, "Class") == 0){
-            strcpy(attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, "Batch");
-          }
-          const char *attrType = attrCatRecord[ATTRCAT_ATTR_TYPE_INDEX].nVal == NUMBER ? "NUM" : "STR";
-          printf(" %s: %s\n", attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, attrType);
-
-        }
-
-      }
-      currBlock = attrCatHeader.rblock;
-
+      printf("\t%s %s\n", attrCatEntry.attrName, attrCatEntry.attrType == NUMBER ? "NUM" : "STR");
     }
 
-    printf("\n");
   }
   
   return 0;
