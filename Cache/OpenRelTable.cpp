@@ -78,29 +78,100 @@ OpenRelTable::OpenRelTable(){
     
     AttrCacheTable::attrCache[ATTRCAT_RELID] = head;
 
+
+    int studentsRelCatSlot = -1;
+    Attribute studentsRecord[RELCAT_NO_ATTRS];
+
+    HeadInfo relCatHeader;
+    relCatBlock.getHeader(&relCatHeader);
+
+    for(int slotNum = 0; slotNum <= relCatHeader.numSlots; slotNum++){
+    relCatBlock.getRecord(studentsRecord, slotNum);
+
+    if(strcmp(studentsRecord[RELCAT_REL_NAME_INDEX].sVal, "Students") == 0){
+        studentsRelCatSlot = slotNum;
+        break;
+    }
+    }
+
+    if(studentsRelCatSlot != -1){
+    RelCacheEntry studentsRelCacheEntry;
+
+    RelCacheTable::recordToRelCatEntry(
+        studentsRecord, 
+        &studentsRelCacheEntry.relCatEntry
+    );
+
+    studentsRelCacheEntry.recId.block = RELCAT_BLOCK;
+    studentsRelCacheEntry.recId.slot = studentsRelCatSlot;
+
+    RelCacheTable::relCache[2] = (struct RelCacheEntry *)std::malloc(sizeof(RelCacheEntry));
+    *(RelCacheTable::relCache[2]) = studentsRelCacheEntry;
+    }
+
+    /**** setting up Students relation in the Attribute Cache Table ****/
+    HeadInfo attrCatHeader;
+    attrCatBlock.getHeader(&attrCatHeader);
+
+    AttrCacheEntry *studentsHead = nullptr;
+
+    for (int slotNum = attrCatHeader.numSlots - 1;
+        slotNum >= 0;
+        slotNum--){
+
+    Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
+    attrCatBlock.getRecord(attrCatRecord, slotNum);
+
+    if (strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal,"Students") != 0){
+        continue;
+    }
+
+    AttrCacheEntry *entry = (AttrCacheEntry *)malloc(sizeof(AttrCacheEntry));
+
+    AttrCacheTable::recordToAttrCatEntry(
+        attrCatRecord,
+        &entry->attrCatEntry
+    );
+
+    entry->recId.block = ATTRCAT_BLOCK;
+    entry->recId.slot = slotNum;
+
+    entry->next = studentsHead;
+    studentsHead = entry;
+    }
+
+    AttrCacheTable::attrCache[2] = studentsHead;
 }
 
 
 OpenRelTable::~OpenRelTable(){
 
-  free(RelCacheTable::relCache[RELCAT_RELID]);
-  free(RelCacheTable::relCache[ATTRCAT_RELID]);
+    free(RelCacheTable::relCache[RELCAT_RELID]);
+    free(RelCacheTable::relCache[ATTRCAT_RELID]);
 
-  AttrCacheEntry *current = AttrCacheTable::attrCache[RELCAT_RELID];
+    AttrCacheEntry *current = AttrCacheTable::attrCache[RELCAT_RELID];
 
 
-  while(current != nullptr){
-    AttrCacheEntry *next = current->next;
-    free(current);
-    current = next;
-  }
+    while(current != nullptr){
+        AttrCacheEntry *next = current->next;
+        free(current);
+        current = next;
+    }
 
-  current = AttrCacheTable::attrCache[ATTRCAT_RELID];
+    current = AttrCacheTable::attrCache[ATTRCAT_RELID];
 
-  while(current != nullptr){
-    AttrCacheEntry* next = current->next;
-    free(current);
-    current = next;
-  }
+    while(current != nullptr){
+        AttrCacheEntry* next = current->next;
+        free(current);
+        current = next;
+    }
+
+    current = AttrCacheTable::attrCache[2];
+
+    while (current != nullptr){
+        AttrCacheEntry *next = current->next;
+        free(current);
+        current = next;
+    }
 }
 
