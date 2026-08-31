@@ -70,3 +70,26 @@ int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char **buffPtr){
 
     return SUCCESS;
 }
+
+int RecBuffer::getSlotMap(unsigned char *slotMap){
+    unsigned char *bufferPtr;
+
+    int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+    if(ret != SUCCESS)
+        return ret;
+
+    struct HeadInfo head;
+    this->getHeader(&head);
+
+    int slotCount = head.numSlots;
+    unsigned char *slotMapInBuffer = bufferPtr + HEADER_SIZE;
+
+    memcpy(slotMap, slotMapInBuffer, slotCount);
+
+    return SUCCESS;
+}
+
+int compareAttrs(Attribute attr1, Attribute attr2, int attrType){
+    int res = attrType == NUMBER ? attr1.nVal - attr2.nVal : strcmp(attr1.sVal, attr2.sVal);
+    return res == 0 ? 0 : res / abs(res);
+}

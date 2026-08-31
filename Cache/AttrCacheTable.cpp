@@ -32,3 +32,20 @@ void AttrCacheTable::recordToAttrCatEntry(Attribute record[ATTRCAT_NO_ATTRS], At
     attrCatEntry->offset = (int)record[ATTRCAT_OFFSET_INDEX].nVal;
 
 }
+
+int AttrCacheTable::getAttrCatEntry(int relId, char attrName[ATTR_SIZE], AttrCatEntry *attrCatBuf){
+    if(relId < 0 || relId >= MAX_OPEN)
+        return E_OUTOFBOUND;
+
+    if(attrCache[relId] == nullptr)
+        return E_RELNOTOPEN;
+
+    for(AttrCacheEntry *temp = attrCache[relId]; temp != nullptr; temp = temp->next){
+        if(strcmp(temp->attrCatEntry.attrName, attrName) == 0){
+            *attrCatBuf = temp->attrCatEntry;
+            return SUCCESS;
+        }
+    }
+
+    return E_ATTRNOTEXIST;
+}
