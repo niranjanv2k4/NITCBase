@@ -86,27 +86,27 @@ OpenRelTable::OpenRelTable(){
     relCatBlock.getHeader(&relCatHeader);
 
     for(int slotNum = 0; slotNum <= relCatHeader.numSlots; slotNum++){
-    relCatBlock.getRecord(studentsRecord, slotNum);
+        relCatBlock.getRecord(studentsRecord, slotNum);
 
-    if(strcmp(studentsRecord[RELCAT_REL_NAME_INDEX].sVal, "Students") == 0){
-        studentsRelCatSlot = slotNum;
-        break;
-    }
+        if(strcmp(studentsRecord[RELCAT_REL_NAME_INDEX].sVal, "Students") == 0){
+            studentsRelCatSlot = slotNum;
+            break;
+        }
     }
 
     if(studentsRelCatSlot != -1){
-    RelCacheEntry studentsRelCacheEntry;
+        RelCacheEntry studentsRelCacheEntry;
 
-    RelCacheTable::recordToRelCatEntry(
-        studentsRecord, 
-        &studentsRelCacheEntry.relCatEntry
-    );
+        RelCacheTable::recordToRelCatEntry(
+            studentsRecord, 
+            &studentsRelCacheEntry.relCatEntry
+        );
 
-    studentsRelCacheEntry.recId.block = RELCAT_BLOCK;
-    studentsRelCacheEntry.recId.slot = studentsRelCatSlot;
+        studentsRelCacheEntry.recId.block = RELCAT_BLOCK;
+        studentsRelCacheEntry.recId.slot = studentsRelCatSlot;
 
-    RelCacheTable::relCache[2] = (struct RelCacheEntry *)std::malloc(sizeof(RelCacheEntry));
-    *(RelCacheTable::relCache[2]) = studentsRelCacheEntry;
+        RelCacheTable::relCache[2] = (struct RelCacheEntry *)std::malloc(sizeof(RelCacheEntry));
+        *(RelCacheTable::relCache[2]) = studentsRelCacheEntry;
     }
 
     /**** setting up Students relation in the Attribute Cache Table ****/
@@ -115,29 +115,27 @@ OpenRelTable::OpenRelTable(){
 
     AttrCacheEntry *studentsHead = nullptr;
 
-    for (int slotNum = attrCatHeader.numSlots - 1;
-        slotNum >= 0;
-        slotNum--){
+    for (int slotNum = attrCatHeader.numSlots - 1; slotNum >= 0; slotNum--){
 
-    Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
-    attrCatBlock.getRecord(attrCatRecord, slotNum);
+        Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
+        attrCatBlock.getRecord(attrCatRecord, slotNum);
 
-    if (strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal,"Students") != 0){
-        continue;
-    }
+        if (strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal,"Students") != 0){
+            continue;
+        }
 
-    AttrCacheEntry *entry = (AttrCacheEntry *)malloc(sizeof(AttrCacheEntry));
+        AttrCacheEntry *entry = (AttrCacheEntry *)malloc(sizeof(AttrCacheEntry));
 
-    AttrCacheTable::recordToAttrCatEntry(
-        attrCatRecord,
-        &entry->attrCatEntry
-    );
+        AttrCacheTable::recordToAttrCatEntry(
+            attrCatRecord,
+            &entry->attrCatEntry
+        );
 
-    entry->recId.block = ATTRCAT_BLOCK;
-    entry->recId.slot = slotNum;
+        entry->recId.block = ATTRCAT_BLOCK;
+        entry->recId.slot = slotNum;
 
-    entry->next = studentsHead;
-    studentsHead = entry;
+        entry->next = studentsHead;
+        studentsHead = entry;
     }
 
     AttrCacheTable::attrCache[2] = studentsHead;
@@ -185,6 +183,9 @@ int OpenRelTable::getRelId(char relName[ATTR_SIZE]) {
 
     if(strcmp(relName, ATTRCAT_RELNAME) == 0)
         return ATTRCAT_RELID;
+
+    if(strcmp(relName, "Students") == 0)
+        return 2;
 
     return E_RELNOTOPEN;
 }
