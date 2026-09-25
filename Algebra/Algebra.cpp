@@ -16,8 +16,9 @@ int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr
 
     AttrCatEntry attrCatEntry;
     int ret = AttrCacheTable::getAttrCatEntry(srcRelId, attr, &attrCatEntry);
-    if(ret != SUCCESS)
-        return E_ATTRNOTEXIST;
+    if(ret != SUCCESS) {
+        return ret;
+    }
 
     int type = attrCatEntry.attrType;
     Attribute attrVal;
