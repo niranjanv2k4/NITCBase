@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdio>
 
+#include <bits/stdc++.h>
 using namespace std;
 
 bool isNumber(char *str);
@@ -94,4 +95,42 @@ bool isNumber(char *str) {
   */
   int ret = sscanf(str, "%f %n", &ignore, &len);
   return ret == 1 && len == strlen(str);
+}
+
+int Algebra::insert(char relName[ATTR_SIZE], int numberOfAttributes, char record[][ATTR_SIZE]){
+
+    if(strcmp(relName, RELCAT_RELNAME) == 0 || strcmp(relName, ATTRCAT_RELNAME) == 0)
+        return E_NOTPERMITTED;
+
+    int relId = OpenRelTable::getRelId(relName);
+    if(relId == E_RELNOTOPEN)
+        return E_RELNOTOPEN;
+
+    RelCatEntry relCatEntry;
+    RelCacheTable::getRelCatEntry(relId, &relCatEntry);
+
+    if(relCatEntry.numAttrs != numberOfAttributes)
+        return E_NATTRMISMATCH;
+    
+    Attribute recordValues[numberOfAttributes];
+
+    for(int offset = 0; offset < numberOfAttributes; offset++){
+
+        AttrCatEntry attrCatBuf;
+        AttrCacheTable::getAttrCatEntry(relId, offset, &attrCatBuf);
+
+        if(attrCatBuf.attrType == NUMBER){
+            if(isNumber(record[offset]))
+                recordValues[offset].nVal = atof(record[offset]);
+            else
+                return E_ATTRTYPEMISMATCH;
+        }
+        else if(attrCatBuf.attrType == STRING){
+            strcpy(recordValues[offset].sVal, record[offset]);
+        }
+
+    }
+
+    return BlockAccess::insert(relId, recordValues);
+
 }

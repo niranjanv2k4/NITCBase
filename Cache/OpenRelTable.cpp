@@ -123,7 +123,7 @@ OpenRelTable::~OpenRelTable(){
 int OpenRelTable::getRelId(char relName[ATTR_SIZE]) {
 
     for(int relId = 0; relId < MAX_OPEN; relId++)
-        if(strcmp(relName, OpenRelTable::tableMetaInfo[relId].relName) == 0)
+        if(!OpenRelTable::tableMetaInfo[relId].free && strcmp(relName, OpenRelTable::tableMetaInfo[relId].relName) == 0)
             return relId;
 
     return E_RELNOTOPEN;
@@ -215,23 +215,32 @@ int OpenRelTable::closeRel(int relId){
     if(relId == RELCAT_RELID || relId == ATTRCAT_RELID)
         return E_NOTPERMITTED;
 
-    if(relId < 0 || relId >= MAX_OPEN)
+    if(relId < 2 || relId >= MAX_OPEN)
         return E_OUTOFBOUND;
 
     if(OpenRelTable::tableMetaInfo[relId].free)
         return E_RELNOTOPEN;
+    
+    if(RelCacheTable::relCache[relId]->dirty){
+
+        Attribute relCatBuffer[RELCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[relId]->relCatEntry), relCatBuffer);
+
+        RecBuffer relCatBlock(RelCacheTable::relCache[relId]->recId.block);
+        relCatBlock.setRecord(relCatBuffer, RelCacheTable::relCache[relId]->recId.slot);
+
+    }
 
     free(RelCacheTable::relCache[relId]);
     RelCacheTable::relCache[relId] = nullptr;
 
     while(AttrCacheTable::attrCache[relId]){
         AttrCacheEntry* temp = AttrCacheTable::attrCache[relId];
-        // cout << temp->attrCatEntry.attrName << " ";
         AttrCacheTable::attrCache[relId] = AttrCacheTable::attrCache[relId]->next;
-
         free(temp);
-        temp = nullptr;
     }
+
+    AttrCacheTable::attrCache[relId] == nullptr;
 
     OpenRelTable::tableMetaInfo[relId].free = true;
 
