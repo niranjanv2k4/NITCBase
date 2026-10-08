@@ -296,3 +296,130 @@ int BlockAccess::insert(int relId, Attribute *record){
     return SUCCESS;
 
 }
+
+int BlockAccess::search(int relId, Attribute *record, char attrName[ATTR_SIZE], Attribute attrVal, int op){
+
+    RecId recId;
+
+    recId = linearSearch(relId, attrName, attrVal, op);
+    if(recId.block == -1 && recId.slot == -1)
+        return E_NOTFOUND;
+
+    RecBuffer buffer(recId.block);
+    buffer.getRecord(record, recId.slot);
+
+    return SUCCESS;
+
+}
+
+int BlockAccess::deleteRelation(char relName[ATTR_SIZE]){
+
+    if(strcmp(relName, RELCAT_RELNAME) == 0 || strcmp(relName, ATTRCAT_RELNAME) == 0)
+        return E_NOTPERMITTED;
+
+    RelCacheTable::resetSearchIndex(RELCAT_RELID);
+
+    Attribute relNameAttr;
+    strcpy(relNameAttr.sVal, relName);
+
+    RecId recId = BlockAccess::linearSearch(RELCAT_RELID, (char *)RELCAT_ATTR_RELNAME, relNameAttr, EQ);
+    if(recId.block == -1 && recId.slot == -1)
+        return E_RELNOTEXIST;
+
+    Attribute relCatEntryRecord[RELCAT_NO_ATTRS];
+    RecBuffer relCatBuffer(recId.block);
+    relCatBuffer.getRecord(relCatEntryRecord, recId.slot);
+
+    int currBlk = (int)relCatEntryRecord[RELCAT_FIRST_BLOCK_INDEX].nVal;
+    int numOfAttributes = (int)relCatEntryRecord[RELCAT_NO_ATTRIBUTES_INDEX].nVal;
+
+    while(currBlk != -1){
+
+        HeadInfo head;
+        RecBuffer currBlockBuffer(currBlk);
+        currBlockBuffer.getHeader(&head);
+
+        currBlk = head.rblock;
+        currBlockBuffer.releaseBlock();
+
+    }
+
+    RelCacheTable::resetSearchIndex(ATTRCAT_RELID);
+
+    int numOfAttributesDeleted = 0;
+
+    while(true){
+
+        RecId attrCatRecId = BlockAccess::linearSearch(ATTRCAT_RELID, (char *)ATTRCAT_ATTR_RELNAME, relNameAttr, EQ);
+        if(attrCatRecId.block == -1 && attrCatRecId.slot == -1)
+            break;
+
+        numOfAttributesDeleted++;
+
+        RecBuffer attrCatBlock(attrCatRecId.block);
+        HeadInfo attrCatBlockHeader;
+        attrCatBlock.getHeader(&attrCatBlockHeader);
+
+        unsigned char slotMap[attrCatBlockHeader.numSlots];
+        attrCatBlock.getSlotMap(slotMap);
+        slotMap[attrCatRecId.slot] = SLOT_UNOCCUPIED;
+        attrCatBlock.setSlotMap(slotMap);
+
+        attrCatBlockHeader.numEntries--;
+
+        if(attrCatBlockHeader.numEntries == 0){
+
+            RecBuffer prevBlock(attrCatBlockHeader.lblock);
+            HeadInfo prevBlockHeader;
+            prevBlock.getHeader(&prevBlockHeader);
+
+            prevBlockHeader.rblock = attrCatBlockHeader.rblock;
+
+            prevBlock.setHeader(&prevBlockHeader);
+
+            if(attrCatBlockHeader.rblock != -1){
+
+                RecBuffer nextBlock(attrCatBlockHeader.rblock);
+                HeadInfo nextBlockHeader;
+                nextBlock.getHeader(&nextBlockHeader);
+
+                nextBlockHeader.lblock = attrCatBlockHeader.lblock;
+
+                nextBlock.setHeader(&nextBlockHeader); 
+            }
+            else {
+                RelCatEntry relCatEntry;
+                RelCacheTable::getRelCatEntry(ATTRCAT_RELID, &relCatEntry);
+                relCatEntry.lastBlk = attrCatBlockHeader.lblock;
+                RelCacheTable::setRelCatEntry(ATTRCAT_RELID, &relCatEntry);
+            }
+
+            attrCatBlock.releaseBlock();
+        }
+    }
+
+    HeadInfo relCatHeader;
+    RecBuffer relCatBlock(RELCAT_BLOCK);
+
+    relCatBlock.getHeader(&relCatHeader);
+    relCatHeader.numEntries--;
+    relCatBlock.setHeader(&relCatHeader);
+
+    unsigned char slotMap[relCatHeader.numSlots];
+
+    relCatBlock.getSlotMap(slotMap);
+    slotMap[recId.slot] = SLOT_UNOCCUPIED;
+    relCatBlock.setSlotMap(slotMap);
+
+    RelCatEntry relCatEntry;
+    RelCacheTable::getRelCatEntry(RELCAT_RELID, &relCatEntry);
+    relCatEntry.numRecs--;
+    RelCacheTable::setRelCatEntry(RELCAT_RELID, &relCatEntry);
+
+    RelCatEntry attrRelCatEntry;
+    RelCacheTable::getRelCatEntry(ATTRCAT_RELID, &attrRelCatEntry);
+    attrRelCatEntry.numRecs -= numOfAttributesDeleted;
+    RelCacheTable::setRelCatEntry(ATTRCAT_RELID, &attrRelCatEntry);
+
+    return SUCCESS;
+}
