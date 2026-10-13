@@ -247,11 +247,16 @@ int OpenRelTable::closeRel(int relId){
     
     if(RelCacheTable::relCache[relId]->dirty){
 
-        Attribute relCatBuffer[RELCAT_NO_ATTRS];
-        RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[relId]->relCatEntry), relCatBuffer);
+        Attribute record[RELCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[relId]->relCatEntry), record);
 
-        RecBuffer relCatBlock(RelCacheTable::relCache[relId]->recId.block);
-        relCatBlock.setRecord(relCatBuffer, RelCacheTable::relCache[relId]->recId.slot);
+        Attribute attrVal ;
+        strcpy(attrVal.sVal,record[RELCAT_REL_NAME_INDEX].sVal);
+        RelCacheTable::resetSearchIndex(RELCAT_RELID);
+        RecId recId = BlockAccess::linearSearch(RELCAT_RELID,(char*)RELCAT_ATTR_RELNAME, attrVal, EQ);
+
+        RecBuffer relCatBlock(recId.block);
+        relCatBlock.setRecord(record, recId.slot);
 
     }
 

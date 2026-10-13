@@ -231,18 +231,18 @@ int BlockAccess::insert(int relId, Attribute *record){
             return E_MAXRELATIONS;
 
         RecBuffer newRecordBlock;
-        int blockNum = newRecordBlock.getBlockNum();
+        int newBlockNum = newRecordBlock.getBlockNum();
 
-        if(blockNum == E_DISKFULL)
+        if(newBlockNum == E_DISKFULL)
             return E_DISKFULL;
 
-        recId.block = blockNum;
+        recId.block = newBlockNum;
         recId.slot = 0;
 
         struct HeadInfo head;
         head.blockType = REC;
         head.pblock = -1;
-        head.lblock = -1;
+        head.lblock = (relCatEntry.numRecs ==  0 ? -1 : prevBlockNum);
         head.rblock = -1;
         head.numEntries = 0;
         head.numSlots = numOfSlots;
@@ -260,19 +260,19 @@ int BlockAccess::insert(int relId, Attribute *record){
             struct HeadInfo prevHead;
             prevBlockBuffer.getHeader(&prevHead);
 
-            prevHead.rblock = recId.block;
+            prevHead.rblock = newBlockNum;
 
             prevBlockBuffer.setHeader(&prevHead);
 
         }
         else {
 
-            relCatEntry.firstBlk = blockNum;
+            relCatEntry.firstBlk = newBlockNum;
             RelCacheTable::setRelCatEntry(relId, &relCatEntry);
 
         }
 
-        relCatEntry.lastBlk = blockNum;
+        relCatEntry.lastBlk = newBlockNum;
         RelCacheTable::setRelCatEntry(relId, &relCatEntry);
 
     }
@@ -420,6 +420,58 @@ int BlockAccess::deleteRelation(char relName[ATTR_SIZE]){
     RelCacheTable::getRelCatEntry(ATTRCAT_RELID, &attrRelCatEntry);
     attrRelCatEntry.numRecs -= numOfAttributesDeleted;
     RelCacheTable::setRelCatEntry(ATTRCAT_RELID, &attrRelCatEntry);
+
+    return SUCCESS;
+}
+
+int BlockAccess::project(int relId, Attribute *record){
+
+    RecId prevSearchIndex;
+    RelCacheTable::getSearchIndex(relId, &prevSearchIndex);
+
+    int block, slot;
+
+    if(prevSearchIndex.block == -1 && prevSearchIndex.slot == -1){
+        RelCatEntry relCatEntry;
+        RelCacheTable::getRelCatEntry(relId, &relCatEntry);
+
+        block = relCatEntry.firstBlk;
+        slot = 0;
+    }
+    else { 
+        block = prevSearchIndex.block;
+        slot = prevSearchIndex.slot + 1;
+    }
+
+    while(block != -1){
+        RecBuffer currBlockBuffer(block);
+
+        HeadInfo head;
+        currBlockBuffer.getHeader(&head);
+
+        unsigned char slotMap[head.numSlots];
+        currBlockBuffer.getSlotMap(slotMap);
+
+        if(slot >= head.numSlots){
+            block = head.rblock;
+            slot = 0;
+        }
+        else if(slotMap[slot] == SLOT_UNOCCUPIED){
+            slot++;
+        }
+        else {
+            break;
+        }
+    }
+
+    if(block == -1)
+        return E_NOTFOUND;
+
+    RecId nextRecId{block, slot};
+    RelCacheTable::setSearchIndex(relId, &nextRecId);
+
+    RecBuffer finalBlockBuffer(block);
+    finalBlockBuffer.getRecord(record, slot);
 
     return SUCCESS;
 }
